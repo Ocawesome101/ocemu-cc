@@ -2,6 +2,14 @@
 
 local computer = {}
 
+function computer.shutdown(reboot)
+  if reboot then
+    coroutine.yield("reboot")
+  else
+    coroutine.yield("shutdown")
+  end
+end
+
 function computer.freeMemory()
   return 0
 end
@@ -34,7 +42,6 @@ local sigPlex = { -- Mappings of CC signals to OC signals
 }
 
 function computer.pullSignal(timeout)
-  print("Pulling signal")
   if timeout == 0 then
     return
   else
@@ -45,8 +52,22 @@ function computer.pullSignal(timeout)
           rtn[3] = "filesystem"
           rtn[2] = nil -- There isn't really an easy way, at least how I've set this up, to emulate this
         elseif rtn[1] == "key" or rtn[1] == "key_up" then
-          rtn[3] = string.byte(keys[rtn[2]])
-          rtn[4] = keys[rtn[2]]
+          if keys.getName(rtn[2]) == "enter" then
+            rtn[3] = 13
+            rtn[4] = rtn[2]
+          elseif keys.getName(rtn[2]) == "backspace" then
+            rtn[3] = 8
+            rtn[4] = rtn[2]
+          elseif keys.getName(rtn[2]) == "space" then
+            rtn[3] = string.byte(" ")
+            rtn[4] = rtn[2]
+          elseif keys.getName(rtn[2]) == ("up" or "down" or "left" or "right") then
+            rtn[3] = 0
+            rtn[4] = rtn[2]
+          else
+            rtn[3] = string.byte((keys.getName(rtn[2]) or ""))
+            rtn[4] = rtn[2]
+          end
           rtn[2] = nil
         elseif rtn[1] == "paste" then
           rtn[3] = rtn[2]

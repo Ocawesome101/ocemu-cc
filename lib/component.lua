@@ -81,23 +81,23 @@ local emu_components = {
   }
 }
 
-if not fs.exists("/emudata/" .. emu_components[5][2]) then
+if not fs.exists("/emudata/" .. emu_components[5][2]) then -- Create our rootfs dir
   fs.makeDir("/emudata/" .. emu_components[5][2])
 end
 
 function component.list(ctype)
-  print("Gettling component list of type " .. (ctype or "all"))
+--  print("Getting component list of type " .. (ctype or "all"))
   local cList = {}
   for i=1, #emu_components, 1 do
     if emu_components[i][1] == ctype or ctype == nil then
-      print("Found component " .. emu_components[i][2])
+--      print("Found component " .. emu_components[i][2])
       table.insert(cList, emu_components[i][2])
     end
   end
   local i = 1
   return function()
     i = i + 1
-    print("Returning " .. (cList[i - 1] or "nil"))
+--    print("Returning " .. (cList[i - 1] or "nil"))
     return cList[i - 1] or nil
   end
 end
@@ -125,12 +125,12 @@ local function gpu_invoke(addr, operation, ...)
   if not gpu_component.getScreen() then
     return false, "No screen bound"
   end
-  print("Executing operation " .. operation .. " on GPU " .. addr)
+--  print("Executing operation " .. operation .. " on GPU " .. addr)
   return gpu_component[operation](...)
 end
 
 local function eeprom_invoke(addr, operation, ...)
-  print("Invoking " .. operation .. " on system EEPROM")
+--  print("Invoking " .. operation .. " on system EEPROM")
   local opArgs = {...}
   if fs.exists("/emudata/eeprom/") then
     if operation == "setData" then
@@ -201,6 +201,20 @@ function component.invoke(addr, operation, ...)
     return eeprom_invoke(addr, operation, ...)
   else
     return false, "Component " .. ctype .. " has not yet been implemented"
+  end
+end
+
+function component.proxy(address)
+  for i=1, #emu_components, 1 do
+    if emu_components[i][2] == address then
+      if emu_components[i][1] == "filesystem" then
+        return fs_component
+      elseif emu_components[i][1] == "gpu" then
+        return gpu_component
+      elseif emu_components[i][1] == "computer" then
+        return computer_component
+      end
+    end
   end
 end
 

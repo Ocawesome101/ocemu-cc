@@ -80,15 +80,47 @@ local sbMeta = {
   }
 }
 
-local ok, err = loadfile("/emudata/bios.lua")
-if not ok then
-  return error(err)
+local function log()
+  local ns = debug.getinfo(2, "Sn").func
+  print(ns)
 end
 
-setfenv(ok, sbMeta)
+debug.sethook(log, "f")
 
-ok()
+local function boot()
+  local ok, err = loadfile("/emudata/bios.lua")
+  if not ok then
+    return error(err)
+  end
 
+  setfenv(ok, sbMeta)
+
+  local coro = coroutine.create(ok)
+
+  while true do
+    local ok, ret = coroutine.resume(coro, os.pullEvent())
+    if ret == "reboot" then
+      term.clear()
+      return "reboot"
+    elseif ret == "shutdown" then
+      term.clear()
+      term.setCursorPos(1,1)
+      return
+    end
+    if coroutine.status(coro) == "dead" then
+      return
+    end
+  end
+end
+
+while true do
+  local status = boot()
+  if status ~= "reboot" then
+    break
+  end
+end
+
+debug.sethook()
 --os.run({}, "src/machine.lua")
 --[[
 local ok, err = loadfile("/src/machine.lua")
