@@ -2,8 +2,10 @@
 
 print("OCEmuCC Running on " .. _VERSION)
 
-local component = require("lib/component")
 local computer = require("lib/computer")
+local component = require("lib/component")
+
+computer.tmpAddress = component.randomAddress
 
 -- Let's try setting up the sandbox manually, shall we? Probably horribly buggy. --
 local function tcopy(tbl)
@@ -48,20 +50,19 @@ local sbMeta = {
   },
   string = tcopy(string),
   table = tcopy(table),
-  checkArg = function(n, have, ...) -- Pretty much a straight copy of the one from machine.lua
-    local have = type(have)
+  checkArg = function(n, have, ...)
+    local have = type(have) -- What we have
     local args = {...}
     local function check(want)
-      if not want then
-        return false
-      else
-        return have == want or check(table.unpack(args))
+      return have == want
+    end
+    for i=1, #args, 1 do
+      local isMatch = check(args[i])
+      if isMatch then
+        return true
       end
     end
-    if not check(...) then
-      local msg = string.format("bad argument #%d (%s expected, got %s)", n, table.concat({...}, " or "), have)
-      error(msg, 3)
-    end
+    return false, string.format("Bad argument #%d (expected %s, got %s)", n, table.concat(args, " or "), have)
   end,
   component = component,
   computer = computer,
@@ -93,6 +94,17 @@ sbMeta.load = function(text, name, mode, env)
     env = sbMeta
   end
   return load(text, name, mode, env)
+end
+
+local string_format = string.format
+sbMeta.string.format = function(fmt, ...)
+  local args = {...}
+  for i=1, #args, 1 do
+    if type(args[i]) == "table" then
+      args[i] = table.concat(args[i], " ")
+    end
+  end
+  return string_format(fmt, table.unpack(args))
 end
 
 sbMeta._G = sbMeta

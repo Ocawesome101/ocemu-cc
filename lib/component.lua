@@ -224,4 +224,6 @@ function component.proxy(address)
   end
 end
 
+component.randomAddress = randomAddress
+
 return component
