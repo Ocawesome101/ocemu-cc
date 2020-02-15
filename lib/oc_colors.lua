@@ -22,6 +22,9 @@ local colorPlex = { -- CC colors plexed to OC colors
 }
 
 function oc.convertToCC(ocColor) -- TODO: Improve
+  if ocColor == 0x00CC00 then
+    return colors.white
+  end
   if ocColor >= 0x000000 and ocColor <= 0x111111 then
     return colors.black 
   elseif ocColor >= 0x222222 and ocColor <= 0x888888 then

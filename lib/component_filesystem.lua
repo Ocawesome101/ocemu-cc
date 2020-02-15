@@ -30,6 +30,8 @@ function filesystem.lastModified()
   return 0
 end
 
+filesystem.isDir = true -- Tell /etc/init.d/70_filesystem.lua we're on computercraft
+
 function filesystem.makeDirectory(path)
   return fs.makeDir(fsAddress .. "/" .. path)
 end
@@ -55,9 +57,16 @@ function filesystem.isDirectory(path)
   return fs.isDir(fsAddress .. "/" .. path)
 end
 
+function filesystem.exists(path)
+  return fs.exists(fsAddress .. "/" .. path)
+end
+
 function filesystem.open(file, mode)
+  if not fs.exists(fsAddress .. "/" .. file) then
+    return false, file .. ": file not found"
+  end
   local mode = mode or "r"
-  local handle = fs.open(fsAddress .. "/" .. file, mode)
+  local handle = io.open(fsAddress .. "/" .. file, mode)
   openHandles[#openHandles + 1] = handle
   return #openHandles
 end
@@ -68,18 +77,21 @@ function filesystem.read(handle, amount)
     amount = 0xFFFF
   end
   if openHandles[handle] then
-    return openHandles[handle].read(amount)
+    local rtnData = openHandles[handle]:read(amount)
+    return rtnData
+  else
+    return nil
   end
 end
 
 function filesystem.write(handle, data)
   if openHandles[handle] then
-    return openHandles[handle].write(data)
+    return openHandles[handle]:write(data)
   end
 end
 
 function filesystem.close(handle)
-  openHandles[handle] = nil
+  openHandles[handle]:close()
 end
 
 return filesystem

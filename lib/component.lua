@@ -91,15 +91,21 @@ function component.list(ctype)
   for i=1, #emu_components, 1 do
     if emu_components[i][1] == ctype or ctype == nil then
 --      print("Found component " .. emu_components[i][2])
-      table.insert(cList, emu_components[i][2])
+      cList[#cList + 1] = {type = emu_components[i][1], addr = emu_components[i][2]}
     end
   end
   local i = 1
-  return function()
+  local rtn = {}
+  local call = function()
     i = i + 1
 --    print("Returning " .. (cList[i - 1] or "nil"))
-    return cList[i - 1] or nil
+    return (cList[i - 1].addr or nil), (cList[i - 1].type or nil)
   end
+  for i=1, #cList, 1 do
+    rtn[cList[i].addr] = cList[i].type
+  end
+  setmetatable(rtn, {__call=call})
+  return rtn
 end
 
 function component.doc()
@@ -111,8 +117,8 @@ function component.fields()
 end
 
 local function fs_invoke(addr, operation, ...)
---  print("Invoking " .. operation .. " on filesystem " .. addr)
   local opArgs = {...}
+--  print("Invoking " .. operation .. " " .. opArgs[1] .. " on filesystem " .. addr)
   if fs.exists("/emudata/" .. addr) then
     return fs_component[operation](...)
   else
@@ -122,7 +128,7 @@ local function fs_invoke(addr, operation, ...)
 end
 
 local function gpu_invoke(addr, operation, ...)
-  if not gpu_component.getScreen() then
+  if not gpu_component.getScreen() and operation ~= "bind" then
     return false, "No screen bound"
   end
 --  print("Executing operation " .. operation .. " on GPU " .. addr)
@@ -172,7 +178,7 @@ end
 
 local function computer_invoke(addr, operation, ...)
   if computer[operation] then
-    print("Invoking operation " .. operation .. " on computer " .. addr)
+--    print("Invoking operation " .. operation .. " on computer " .. addr)
     return computer[operation](...)
   end
 end

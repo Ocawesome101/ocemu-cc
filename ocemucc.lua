@@ -20,7 +20,6 @@ local sbMeta = {
   error = error,
   getmetatable = getmetatable,
   ipairs = ipairs,
-  load = load,
   next = next,
   pairs = pairs,
   pcall = pcall,
@@ -80,12 +79,30 @@ local sbMeta = {
   }
 }
 
+sbMeta.load = function(text, name, mode, env)
+  if type(text) ~= "string" then
+    return nil, "Invalid argument #1 (expected string)"
+  end
+  if name ~= nil and type(name) ~= "string" then
+    return nil, "Invalid argument #2 (expected string)"
+  end
+  local name = name or "=" .. text
+  local mode = mode or "t"
+  local env = env or sbMeta
+  if env == _G then
+    env = sbMeta
+  end
+  return load(text, name, mode, env)
+end
+
+sbMeta._G = sbMeta
+
 local function log()
   local ns = debug.getinfo(2, "Sn").func
   print(ns)
 end
 
-debug.sethook(log, "f")
+--debug.sethook(log, "f")
 
 local function boot()
   local ok, err = loadfile("/emudata/bios.lua")
@@ -99,7 +116,10 @@ local function boot()
 
   while true do
     local ok, ret = coroutine.resume(coro, os.pullEvent())
-    if ret == "reboot" then
+    if not ok then
+      error(ret)
+      break
+    elseif ret == "reboot" then
       term.clear()
       return "reboot"
     elseif ret == "shutdown" then

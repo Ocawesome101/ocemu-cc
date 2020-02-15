@@ -18,6 +18,10 @@ function computer.realTime()
   return os.epoch("utc")
 end
 
+function computer.uptime()
+  return os.time()
+end
+
 function computer.totalMemory()
   return 2048*1024
 end
@@ -61,8 +65,17 @@ function computer.pullSignal(timeout)
           elseif keys.getName(rtn[2]) == "space" then
             rtn[3] = string.byte(" ")
             rtn[4] = rtn[2]
-          elseif keys.getName(rtn[2]) == ("up" or "down" or "left" or "right") then
+          elseif rtn[2] == keys.up or rtn[2] == keys.down or rtn[2] == keys.left or rtn[2] == keys.right then
             rtn[3] = 0
+            rtn[4] = rtn[2]
+          elseif rtn[2] == keys.leftShift or rtn[2] == keys.rightShift then
+            rtn[3] = 0
+            rtn[4] = rtn[2]
+          elseif rtn[2] == keys.underscore then
+            rtn[3] = string.byte("_")
+            rtn[4] = rtn[2]
+          elseif rtn[2] == keys.minus then
+            rtn[3] = string.byte("-")
             rtn[4] = rtn[2]
           else
             rtn[3] = string.byte((keys.getName(rtn[2]) or ""))
