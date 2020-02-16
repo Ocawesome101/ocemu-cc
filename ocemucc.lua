@@ -112,6 +112,7 @@ sbMeta.string.format = function(fmt, ...)
 end
 
 sbMeta._G = sbMeta
+sbMeta._ENV = sbMeta
 
 local function log()
   local ns = debug.getinfo(2, "Sn").func
@@ -119,6 +120,8 @@ local function log()
 end
 
 --debug.sethook(log, "f")
+
+term.clear()
 
 local function boot()
   local ok, err = loadfile("/emudata/bios.lua")
@@ -156,7 +159,7 @@ while true do
   end
 end
 
-debug.sethook()
+--debug.sethook()
 --os.run({}, "src/machine.lua")
 --[[
 local ok, err = loadfile("/src/machine.lua")

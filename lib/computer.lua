@@ -1,4 +1,4 @@
--- A virtual 'computer' component --
+-- A virtual 'computer' API --
 
 local computer = {}
 
@@ -52,8 +52,8 @@ function computer.pullSignal(timeout)
     return
   else
     while true do
-      local rtn = {os.pullEvent()}
-      if sigPlex[rtn[1]] then -- Rearrange events to match OpenComputers
+      local rtn = {coroutine.yield()}
+      if sigPlex[rtn[1]] then -- Rearrange supported events to match OpenComputers
         if rtn[1] == "disk" or rtn[1] == "disk_removed" then
           rtn[3] = "filesystem"
           rtn[2] = nil -- There isn't really an easy way, at least how I've set this up, to emulate this
@@ -110,6 +110,8 @@ function computer.pullSignal(timeout)
           rtn[2], rtn[3] = term.getSize()
         end
         rtn[1] = sigPlex[rtn[1]] -- This is easy compared to the other ones
+        return table.unpack(rtn)
+      else
         return table.unpack(rtn)
       end
     end
