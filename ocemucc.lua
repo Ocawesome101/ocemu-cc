@@ -7,6 +7,10 @@ local component = require("lib/component")
 
 computer.tmpAddress = component.randomAddress
 
+term.setCursorBlink(false)
+
+term.redirect(term.native())
+
 -- Let's try setting up the sandbox manually, shall we? Probably horribly buggy. --
 local function tcopy(tbl)
   local rtn = {}

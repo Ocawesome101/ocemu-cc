@@ -45,6 +45,8 @@ local sigPlex = { -- Mappings of CC signals to OC signals
   ["term_resize"] = "screen_resized"
 }
 
+local shiftHeld = false
+
 function computer.pullSignal(timeout)
   if timeout == 0 then
     return
@@ -58,29 +60,39 @@ function computer.pullSignal(timeout)
         elseif rtn[1] == "key" or rtn[1] == "key_up" then
           if keys.getName(rtn[2]) == "enter" then
             rtn[3] = 13
-            rtn[4] = rtn[2]
           elseif keys.getName(rtn[2]) == "backspace" then
             rtn[3] = 8
-            rtn[4] = rtn[2]
           elseif keys.getName(rtn[2]) == "space" then
             rtn[3] = string.byte(" ")
-            rtn[4] = rtn[2]
           elseif rtn[2] == keys.up or rtn[2] == keys.down or rtn[2] == keys.left or rtn[2] == keys.right then
             rtn[3] = 0
-            rtn[4] = rtn[2]
           elseif rtn[2] == keys.leftShift or rtn[2] == keys.rightShift then
+            if rtn[1] == "key" then
+              shiftHeld = true
+            else
+              shiftHeld = false
+            end
             rtn[3] = 0
-            rtn[4] = rtn[2]
-          elseif rtn[2] == keys.underscore then
-            rtn[3] = string.byte("_")
-            rtn[4] = rtn[2]
           elseif rtn[2] == keys.minus then
-            rtn[3] = string.byte("-")
-            rtn[4] = rtn[2]
+            if shiftHeld then
+              rtn[3] = string.byte("_")
+            else
+              rtn[3] = string.byte("-")
+            end
+          elseif rtn[2] == keys.semiColon then
+            if shiftHeld then
+              rtn[3] = string.byte(":")
+            else
+              rtn[3] = string.byte(";")
+            end
           else
-            rtn[3] = string.byte((keys.getName(rtn[2]) or ""))
-            rtn[4] = rtn[2]
+            if shiftHeld then
+              rtn[3] = string.byte((keys.getName(rtn[2]):upper() or ""))
+            else
+              rtn[3] = string.byte((keys.getName(rtn[2]):lower() or ""))
+            end
           end
+          rtn[4] = rtn[2]
           rtn[2] = nil
         elseif rtn[1] == "paste" then
           rtn[3] = rtn[2]

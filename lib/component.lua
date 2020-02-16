@@ -6,7 +6,6 @@ local computer_component = require("/lib/component_computer")
 local gpu_component = require("/lib/component_gpu")
 local fs_component = require("/lib/component_filesystem")
 
-
 local addrPlex = {
   "0",
   "1",
@@ -41,57 +40,73 @@ local function randomAddress() -- Get a random component address
   return rtn
 end
 
+local function tcopy(tbl)
+  local rtn = {}
+  for k,v in pairs(tbl) do rtn[k] = v end
+  return rtn
+end
+
 local emu_components = {
   {
-    "computer",
-    randomAddress(),
-    1024^2 -- There's no real memory limit
+    type = "computer",
+    addr = randomAddress(),
+    memory = 1024^2 -- There's no real memory limit
   },
   {
-    "screen",
-    randomAddress()
+    type = "screen",
+    addr = randomAddress()
   },
   {
-    "gpu",
-    randomAddress(),
-    3 -- The GPU tier
+    type = "gpu",
+    addr = randomAddress(),
+    tier = 3
   },
   {
-    "eeprom",
-    randomAddress(),
-    4096, -- Max capacity
-    256, -- Max data capacity
-    "EEPROM (Lua BIOS)" -- Label
+    type = "eeprom",
+    addr = randomAddress(),
+    biosSize = 4096,
+    dataSize = 256,
+    label = "EEPROM (Lua BIOS)"
   },
   {
-    "filesystem",
-    dofile("/lib/root_fs_address.lua"), -- Hax to pull off consistent rootFS addresses
-    false,
-    "EmuRoot"
+    type = "filesystem",
+    addr = dofile("/lib/root_fs_address.lua"), -- Hax to pull off consistent rootFS addresses
+    isTmp = false,
+    label = "EmuRoot"
   },
   {
-    "keyboard",
-    randomAddress()
+    type = "filesystem",
+    addr = randomAddress(),
+    isTmp = true,
+    label = "tmpfs"
   },
   {
-    "internet",
-    randomAddress(),
-    true, -- HTTP?
-    false -- TCP? I don't know if CC:Tweaked supports TCP sockets
+    type = "keyboard",
+    addr = randomAddress()
+  },
+  {
+    type = "internet",
+    addr = randomAddress(),
+    httpEnabled = true,
+    tcpEnabled = false -- I don't know if CC:Tweaked supports TCP sockets
   }
 }
 
-if not fs.exists("/emudata/" .. emu_components[5][2]) then -- Create our rootfs dir
-  fs.makeDir("/emudata/" .. emu_components[5][2])
+if not fs.exists("/emudata/" .. emu_components[5].addr) then -- Create our rootfs dir
+  fs.makeDir("/emudata/" .. emu_components[5].addr)
+end
+
+if not fs.exists("/emudata/tmpfs") then
+  fs.makeDir("/emudata/tmpfs")
 end
 
 function component.list(ctype)
 --  print("Getting component list of type " .. (ctype or "all"))
   local cList = {}
   for i=1, #emu_components, 1 do
-    if emu_components[i][1] == ctype or ctype == nil then
+    if emu_components[i].type == ctype or ctype == nil then
 --      print("Found component " .. emu_components[i][2])
-      cList[#cList + 1] = {type = emu_components[i][1], addr = emu_components[i][2]}
+      cList[#cList + 1] = {type = emu_components[i].type, addr = emu_components[i].addr}
     end
   end
   local i = 1
@@ -99,7 +114,10 @@ function component.list(ctype)
   local call = function()
     i = i + 1
 --    print("Returning " .. (cList[i - 1] or "nil"))
-    return (cList[i - 1].addr or nil), (cList[i - 1].type or nil)
+    if cList[i - 1] then
+      return (cList[i - 1].addr or nil), (cList[i - 1].type or nil)
+    end
+    return nil
   end
   for i=1, #cList, 1 do
     rtn[cList[i].addr] = cList[i].type
@@ -189,13 +207,13 @@ function component.invoke(addr, operation, ...)
     return
   end
   for i=1, #emu_components, 1 do
-    if emu_components[i][2] == addr then
-      ctype = emu_components[i][1]
-      addr = emu_components[i][2]
+    if emu_components[i].addr == addr then
+      ctype = emu_components[i].type
+      addr = emu_components[i].addr
     end
   end
   if not (ctype and addr) then
-    return false, "No such component"
+    return false, error("No such component")
   end
   if ctype == "filesystem" then
     return fs_invoke(addr, operation, ...)
@@ -206,19 +224,33 @@ function component.invoke(addr, operation, ...)
   elseif ctype == "eeprom" then
     return eeprom_invoke(addr, operation, ...)
   else
-    return false, "Component " .. ctype .. " has not yet been implemented"
+    return false, error("Component " .. ctype .. " has not yet been implemented")
   end
 end
 
 function component.proxy(address)
   for i=1, #emu_components, 1 do
-    if emu_components[i][2] == address then
-      if emu_components[i][1] == "filesystem" then
-        return fs_component
-      elseif emu_components[i][1] == "gpu" then
+    if emu_components[i].addr == address then
+      if emu_components[i].type == "filesystem" then
+        local fs_component = require("/lib/component_filesystem")
+        if emu_components[i].isTmp == true then
+          fs_component.setAddress("tmpfs")
+        else
+          fs_component.setAddress(address)
+        end
+        fs_component.address = address
+        fs_component.type = "filesystem"
+        return tcopy(fs_component)
+      elseif emu_components[i].type == "gpu" then
+        gpu_component.address = address
+        gpu_component.type = "gpu"
         return gpu_component
-      elseif emu_components[i][1] == "computer" then
+      elseif emu_components[i].type == "computer" then
+        computer_component.type = "computer"
+        computer_component.address = address
         return computer_component
+      else
+        return {type = emu_components[i].type, address = address}
       end
     end
   end

@@ -6,6 +6,10 @@ local fsAddress = "/emudata/" .. dofile("/lib/root_fs_address.lua") .. "/"
 
 local openHandles = {}
 
+function filesystem.setAddress(addr) -- Used internally
+  fsAddress = "/emudata/" .. addr .. "/"
+end
+
 function filesystem.seek()
   return false, "This function is not implemented"
 end
@@ -30,7 +34,7 @@ function filesystem.lastModified()
   return 0
 end
 
-filesystem.isDir = true -- Tell /etc/init.d/70_filesystem.lua we're on computercraft
+--filesystem.isDir = true -- Tell Open Kernel's /etc/init.d/70_filesystem.lua we're on computercraft
 
 function filesystem.makeDirectory(path)
   return fs.makeDir(fsAddress .. "/" .. path)
